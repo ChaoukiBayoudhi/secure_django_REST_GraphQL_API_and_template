@@ -381,3 +381,23 @@ SESSION_COOKIE_AGE = 3600  # 1 hour in seconds
 #
 # 4. For Content Security Policy:
 #    - Add CSP middleware and configure CSP directives
+INSTALLED_APPS += [
+    'security',
+]
+
+MIDDLEWARE += [
+    'security.middleware.DoNotTrackMiddleware',
+    'security.middleware.ContentNoSniff',
+    'security.middleware.XssProtectMiddleware',
+]
+
+INSTALLED_APPS += [
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+    'two_factor',
+]
+
+MIDDLEWARE += [
+    'django_otp.middleware.OTPMiddleware',
+]

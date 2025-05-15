@@ -15,6 +15,9 @@ django-guardian = "*"
 django-role-permissions = "*"
 djangorestframework-simplejwt = "*"
 psycopg2 = "*"
+cryptography = "*"
+django-security = "*"
+django-two-factor-auth = "*"
 
 [dev-packages]
 
