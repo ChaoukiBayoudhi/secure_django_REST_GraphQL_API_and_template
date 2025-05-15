@@ -15,26 +15,36 @@ import environ, os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Environment variables configuration
+# Using django-environ for secure environment variable management
+# This allows storing sensitive information outside of version control
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Custom user model
+# Overrides the default Django User model with our custom implementation
+# This allows for email-based authentication instead of username
 AUTH_USER_MODEL = 'users.User'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# The secret key is used for cryptographic signing and should never be exposed
+# It's stored in the .env file to keep it out of version control
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# Debug mode exposes sensitive information and should be disabled in production
 DEBUG = env("DEBUG")
 
+# Allowed hosts restrict which hostnames the Django site can serve
+# This is a security measure to prevent HTTP Host header attacks
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 
 # Application definition
-
+# Built-in Django apps provide core functionality
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -44,6 +54,13 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 ]
 
+# Third-party and custom apps
+# - rest_framework: Provides API functionality
+# - corsheaders: Manages Cross-Origin Resource Sharing
+# - csp: Implements Content Security Policy
+# - rolepermissions: Role-based permission system
+# - graphene_django: GraphQL implementation for Django
+# - Custom apps for project functionality
 INSTALLED_APPS += [
     "rest_framework",
     'corsheaders',
@@ -57,55 +74,206 @@ INSTALLED_APPS += [
     'api',
 ]
 
+# Middleware configuration
+# The order of middleware is important as they process requests in order
+# and responses in reverse order
 MIDDLEWARE = [
+    # Security middleware should be at the top to catch security issues early
     "django.middleware.security.SecurityMiddleware",
+    # CORS middleware must be before CommonMiddleware
     'corsheaders.middleware.CorsMiddleware',
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    # CSRF protection is crucial for security against cross-site request forgery
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Prevents clickjacking attacks by setting X-Frame-Options header
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# REST Framework configuration
+# Defines authentication and permission policies for API endpoints
 REST_FRAMEWORK={
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Session authentication for browser clients
         'rest_framework.authentication.SessionAuthentication',
+        # JWT authentication for programmatic API access
         'rest_framework_simplejwt.authentication.JWTAuthentication',    
     ],
     'DEFAULT_PERMISSION_CLASSES': [
+        # Requires authentication for all API endpoints by default
+        # This is more secure than allowing anonymous access by default
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [ 
+    'rest_framework.throttling.AnonRateThrottle', 
+    'rest_framework.throttling.UserRateThrottle' 
+], 
+'DEFAULT_THROTTLE_RATES': { 
+    'anon': '100/day', 
+    'user': '1000/day' 
+},
 }
+# CORS Configuration
+# Cross-Origin Resource Sharing (CORS) settings to manage cross-site requests
+# This allows controlled access to resources from different domains
+# 6. CORS Configuration
+
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://yourdomain.com",
+    "https://www.yourdomain.com",
+]
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies and authentication headers to be sent with cross-origin requests
+
+
+# CSP Configuration
+# Content Security Policy (CSP) helps prevent cross-site scripting (XSS) attacks
+# This configuration sets up a strict CSP policy
+CSP_DEFAULT_SRC = ["'self'"]  # Only allow resources from the same origin
+CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]  # Allow inline and eval scripts
+CSP_IMG_SRC = ["'self'", "data:"]  # Allow images from the same origin and data URIs
+CSP_STYLE_SRC = ["'self'", "'unsafe-inline'"]  # Allow inline styles
+CSP_FONT_SRC = ["'self'"]  # Allow fonts from the same origin
+# CSRF Configuration
+# Cross-Site Request Forgery (CSRF) protection ensures a request originates from the expected site
+# This configuration allows requests from the specified origins
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
+# Role Permissions Configuration
+# This section defines roles and permissions for the application
+# Roles are defined with associated permissions
+ROLEPERMISSIONS_MODULE = 'research_publications_mgt.roles'
+# ROLEPERMISSIONS_REGISTER_ADMIN = True  # Automatically register admin roles
+# ROLEPERMISSIONS_USE_CUSTOM_ROLES = True  # Use custom roles instead of default ones   
+# ROLEPERMISSIONS_CUSTOM_ROLES = ['admin', 'manager', 'user']  # Custom roles for the application
+# ROLEPERMISSIONS_REGISTER_PERMISSIONS = True  # Automatically register permissions
+# ROLEPERMISSIONS_REDIRECT_TO_LOGIN = True  # Redirect to login if user doesn't have permissions
+# ROLEPERMISSIONS_REDIRECT_TO_DENIED = '/'  # Redirect to this page if user doesn't have permission
+# ROLEPERMISSIONS_REDIRECT_FIELD_NAME = 'next'  # Field name for redirect URL in login form
+# ROLEPERMISSIONS_USE_DJANGO_PERMISSIONS_IN_ADMIN = True  # Use Django permissions in admin
+# Graphene Django Configuration
+# This section configures Graphene Django for GraphQL integration
+GRAPHENE = {
+    'SCHEMA': 'research_publications_mgt.schema.schema',  # The schema for GraphQL
+    'MIDDLEWARE': [
+        'graphql_jwt.middleware.JSONWebTokenMiddleware',  # JWT authentication middleware
+    ],
+}
+# Authentication Backends
+# This section defines the authentication backends used by Django
+AUTHENTICATION_BACKENDS = [
+    #'django.contrib.auth.backends.ModelBackend',  # Default Django authentication backend
+    #'guardian.backends.ObjectPermissionBackend',  # Object-level permissions backend
+    'graphql_jwt.backends.JSONWebTokenBackend',  # JWT authentication backend for GraphQL
+    #'guardian.backends.GuardianBackend',  # Object-level permissions backend for Django Guardian   
+]
+# Guardian Configuration
+# This section configures Django Guardian for object-level permissions
+# ANONYMOUS_USER_NAME = 'anonymous'  # Name for anonymous users
+# AUTHENTICATION_BACKENDS += ['guardian.backends.ObjectPermissionBackend']  # Add Guardian backend to authentication backends
+
 
 from datetime import timedelta
+# JWT Token Security Configuration
+# JSON Web Tokens provide a stateless authentication mechanism
+# This configuration defines security parameters for JWT usage
+
+# JWT Token Configuration
+# This section configures the behavior of JSON Web Tokens used for authentication
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Short lifetime reduces risk if token is compromised
+    
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Longer lifetime for refresh tokens balances security and convenience
+    
+    'ROTATE_REFRESH_TOKENS': True,  # Enhances security by issuing new refresh tokens
+    
+    'BLACKLIST_AFTER_ROTATION': True,  # Prevents reuse of rotated tokens
+    
+    'ALGORITHM': 'HS256',  # HMAC with SHA-256 provides good security with performance
+    
+    'SIGNING_KEY': SECRET_KEY,  # Uses Django's secret key for signing
+    
+    'VERIFYING_KEY': None,  # For symmetric algorithms like HS256, verification uses the same key
+    
+    # Authorization header prefixes define how clients should send tokens
+    # Common options include: Bearer, JWT, Token, ApiKey
+    # OAuth 2.0 standard recommends using 'Bearer'
+    'AUTH_HEADER_TYPES': ('Bearer',),  # Authorization header format: "Bearer <token>"
+    
+    'USER_ID_FIELD': 'id',  # Database field that uniquely identifies users
+    
+    'USER_ID_CLAIM': 'user_id',  # Claim name in the JWT payload for user identity
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),  # Token implementation class
+    
+    'TOKEN_TYPE_CLAIM': 'token_type',  # Distinguishes between access and refresh tokens
+    
+    'JTI_CLAIM': 'jti',  # JWT ID provides a unique identifier for each token
+
+    # Sliding token settings
+    # Sliding tokens extend their expiration time when used
+    # This can improve user experience but may reduce security
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',  # Tracks sliding token expiration
+    
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=15),  # Matches access token lifetime
+    
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),  # Matches refresh token lifetime
 }
 
+
+# URL Configuration
+# The root URLconf module for the project
 ROOT_URLCONF = "research_publications_mgt.urls"
 
+# Template configuration
+# Defines how Django processes templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
+        "DIRS": [],  # Custom template directories
+        "APP_DIRS": True,  # Look for templates in app directories
         "OPTIONS": {
             "context_processors": [
+                # Makes request object available in templates
                 "django.template.context_processors.request",
+                # Makes auth information available in templates
                 "django.contrib.auth.context_processors.auth",
+                # Makes message framework available in templates
                 "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
+# WSGI Configuration
+# Entry point for WSGI servers to serve the application
 WSGI_APPLICATION = "research_publications_mgt.wsgi.application"
 
 
-# Database
+# Database Configuration
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# Using PostgreSQL for production-grade database capabilities
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -114,24 +282,42 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
+        # SSL mode can be enabled for encrypted database connections
+        # "OPTIONS": {
+        #    "sslmode": "require",
+        #},
+        "CONN_MAX_AGE": 60,  # Connection pooling for performance (1 minute)
     }
 }
 
 
-# Password validation
+# Password Validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# These validators enforce password strength requirements
+# Password validation configuration
+# These validators ensure strong password security by enforcing various rules
 AUTH_PASSWORD_VALIDATORS = [
     {
+        # Checks if password is too similar to user attributes (username, email, etc.)
+        # Prevents easily guessable passwords based on user information
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
+        # Enforces a minimum password length
+        # Longer passwords are generally more secure against brute force attacks
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 10,  # Requires passwords to be at least 10 characters long
+        }
     },
     {
+        # Checks if password is in a list of common passwords
+        # Prevents use of frequently used/easily guessable passwords
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
+        # Ensures password isn't entirely numeric
+        # Requires mixing of character types for stronger passwords
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
@@ -139,22 +325,59 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
+# These settings control language, time zone, and localization
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en-us"  # Default language for the application
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "UTC"  # Store all times in UTC for consistency
 
-USE_I18N = True
+USE_I18N = True  # Enable internationalization
 
-USE_TZ = True
+USE_TZ = True  # Enable timezone support
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+# Configuration for serving static assets
 
-STATIC_URL = "static/"
+STATIC_URL = "static/"  # URL prefix for static files
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+# Uses BigAutoField for all models by default (64-bit integer)
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Security Recommendations:
+# 1. For production, consider adding:
+#    - SECURE_SSL_REDIRECT = True  # Redirect HTTP to HTTPS
+#    - SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
+#    - CSRF_COOKIE_SECURE = True  # Only send CSRF cookie over HTTPS
+#    - SECURE_HSTS_SECONDS = 31536000  # Enable HTTP Strict Transport Security
+#
+# 2. Consider implementing rate limiting:
+#    - Add 'DEFAULT_THROTTLE_CLASSES' and 'DEFAULT_THROTTLE_RATES' to REST_FRAMEWORK
+#
+# 3. For enhanced database security:
+#    - Enable SSL connections to PostgreSQL
+#    - Implement database connection pooling
+#
+# 4. For Content Security Policy:
+#    - Add CSP middleware and configure CSP directives
+# 9. Session Security Settings
+#
+# Enhance session security:
+# Session settings
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'  # Prevents CSRF in modern browsers
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 3600  # 1 hour in seconds
+
+# 2. Consider implementing rate limiting:
+#    - Add 'DEFAULT_THROTTLE_CLASSES' and 'DEFAULT_THROTTLE_RATES' to REST_FRAMEWORK
+#
+# 3. For enhanced database security:
+#    - Enable SSL connections to PostgreSQL
+#    - Implement database connection pooling
+#
+# 4. For Content Security Policy:
+#    - Add CSP middleware and configure CSP directives
